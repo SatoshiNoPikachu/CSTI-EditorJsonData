@@ -125,7 +125,7 @@ public class EditorJsonData
         {
             var uidObj = (UniqueIDScriptable)ScriptableObject.CreateInstance(type);
             uidObj.name = "BaseTemplate";
-            uidObj.UniqueID = "";
+            uidObj.UniqueID = "BaseTemplate";
             SetObj(type, [uidObj]);
         }
 
@@ -378,7 +378,7 @@ public class EditorJsonData
             if (type.IsSubclassOf(typeof(UniqueIDScriptable)))
             {
                 OutputJson(dir_base.FullName, name, json);
-                UidObjToTemplate(type);
+                UidObjToTemplate(type, json);
                 continue;
             }
 
@@ -431,7 +431,8 @@ public class EditorJsonData
     /// UniqueIDScriptable 对象转模板
     /// </summary>
     /// <param name="type">类型</param>
-    private void UidObjToTemplate(Type type)
+    /// <param name="baseTemplateJson"></param>
+    private void UidObjToTemplate(Type type, string baseTemplateJson)
     {
         if (!type.IsSubclassOf(typeof(UniqueIDScriptable))) return;
         if (!_objs.ContainsKey(type)) return;
@@ -464,7 +465,8 @@ public class EditorJsonData
 
                 dict_uid[sub][key] = uid_obj.UniqueID;
 
-                OutputJson(dir.FullName, uid_obj.name, ObjToJson(obj));
+                OutputJson(dir.FullName, uid_obj.name,
+                    uid_obj.UniqueID == "BaseTemplate" ? baseTemplateJson : ObjToJson(obj));
             }
         }
 
@@ -647,7 +649,7 @@ public class EditorJsonData
     {
         var data = new JsonData();
 
-        var is_create = false;
+        bool is_create;
 
         if (type == base_type)
         {
