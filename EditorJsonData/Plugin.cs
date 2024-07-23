@@ -9,7 +9,7 @@ internal class Plugin : BaseUnityPlugin
 {
     private const string PluginGuid = "Pikachu.EditorJsonData";
     public const string PluginName = "Editor Json Data";
-    public const string PluginVersion = "1.0.4";
+    public const string PluginVersion = "1.0.5";
 
     // internal static Plugin Instance;
     // public static string PluginPath => Path.GetDirectoryName(Instance.Info.Location);

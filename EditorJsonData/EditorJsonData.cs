@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -378,7 +379,12 @@ public class EditorJsonData
             if (type.IsSubclassOf(typeof(UniqueIDScriptable)))
             {
                 OutputJson(dir_base.FullName, name, json);
-                UidObjToTemplate(type, json);
+
+                data["UniqueID"] = "BaseTemplate";
+                var baseTmpJson = data.ToJson();
+                data["UniqueID"] = "";
+
+                UidObjToTemplate(type, baseTmpJson);
                 continue;
             }
 
@@ -744,13 +750,15 @@ public class EditorJsonData
     /// <param name="json">Json字符串</param>
     private static void OutputJson(string path, string name, string json)
     {
-        try
-        {
-            json = Regex.Unescape(json);
-        }
-        catch (ArgumentException)
-        {
-        }
+        // try
+        // {
+        //     json = Regex.Unescape(json);
+        // }
+        // catch (ArgumentException)
+        // {
+        // }
+
+        json = Unescape(json);
 
         var file = File.CreateText(Path.Combine(path, $"{name}.json"));
         file.WriteLine(json);
@@ -855,5 +863,23 @@ public class EditorJsonData
     {
         return type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
             .Where(IsFieldSerialized).ToList();
+    }
+
+    private static string Unescape(string text)
+    {
+        return Regex.Replace(
+            text,
+            @"\\u([0-9a-fA-F]{4})",
+            m =>
+            {
+                try
+                {
+                    return char.ConvertFromUtf32(int.Parse(m.Groups[1].Value, NumberStyles.HexNumber));
+                }
+                catch (Exception)
+                {
+                    return m.Value;
+                }
+            });
     }
 }
