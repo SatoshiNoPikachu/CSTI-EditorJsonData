@@ -366,6 +366,7 @@ public class EditorJsonData
         var dir_tmp = Directory.CreateDirectory(Path.Combine(_output, "ScriptableObjectJsonDataWithWarpLitAllInOne"));
         var dir_name = Directory.CreateDirectory(Path.Combine(_output, "ScriptableObjectObjectName"));
         var dir_base = Directory.CreateDirectory(Path.Combine(_output, "UniqueIDScriptableBaseJsonData"));
+        var dir_base_from = Directory.CreateDirectory(Path.Combine(dir_base.FullName, "FromScriptableObject"));
 
         foreach (var (type, name) in _types)
         {
@@ -390,6 +391,8 @@ public class EditorJsonData
 
             if (type.IsSubclassOf(typeof(ScriptableObject)))
             {
+                OutputJson(dir_base_from.FullName, name, json);
+
                 var dir = Directory.CreateDirectory(Path.Combine(dir_tmp.FullName, name));
                 OutputJson(dir.FullName, "", json);
                 OutputJson(dir.FullName, "BaseTemplate(模板)", json);
@@ -625,9 +628,9 @@ public class EditorJsonData
     /// 创建 BaseJson (UniqueIDScriptableBaseJsonData)
     /// </summary>
     /// <param name="type">类型</param>
-    /// <param name="base_type">顶层类型名称</param>
+    /// <param name="baseType">顶层类型名称</param>
     /// <param name="toScript">到FromScriptableObject</param>
-    private void CreateBaseJson(Type type, Type base_type, bool toScript)
+    private void CreateBaseJson(Type type, Type baseType, bool toScript)
     {
         type = ResolveType(type);
 
@@ -637,11 +640,11 @@ public class EditorJsonData
         if (type.IsSubclassOf(typeof(UnityEngine.Object))) return;
 
         var dir = Directory.CreateDirectory(Path.Combine(_output, "UniqueIDScriptableBaseJsonData",
-            toScript ? "FromScriptableObject" : _types[base_type]));
+            toScript ? "FromScriptableObject" : _types[baseType]));
         if (File.Exists(Path.Combine(dir.FullName, $"{_types[type]}.json"))) return;
 
         Plugin.Log.LogMessage($"-- BaseJson: {type.Name}");
-        var data = TypeToJsonData(type, base_type);
+        var data = TypeToJsonData(type, baseType);
         OutputJson(dir.FullName, _types[type], data.ToJson());
     }
 
@@ -649,15 +652,15 @@ public class EditorJsonData
     /// 类型转 JsonData
     /// </summary>
     /// <param name="type">类型</param>
-    /// <param name="base_type">顶层类型</param>
+    /// <param name="baseType">顶层类型</param>
     /// <returns>JsonData</returns>
-    private JsonData TypeToJsonData(Type type, Type base_type)
+    private JsonData TypeToJsonData(Type type, Type baseType)
     {
         var data = new JsonData();
 
         bool is_create;
 
-        if (type == base_type)
+        if (type == baseType)
         {
             is_create = type.IsSubclassOf(typeof(ScriptableObject));
         }
@@ -668,17 +671,17 @@ public class EditorJsonData
 
         if (type.IsSubclassOf(typeof(UniqueIDScriptable)))
         {
-            Directory.CreateDirectory(Path.Combine(_output, "UniqueIDScriptableBaseJsonData", _types[base_type]));
+            Directory.CreateDirectory(Path.Combine(_output, "UniqueIDScriptableBaseJsonData", _types[baseType]));
         }
 
         var no_field = true;
-        var is_script = base_type.IsSubclassOf(typeof(ScriptableObject)) &&
+        var is_script = baseType.IsSubclassOf(typeof(ScriptableObject)) &&
                         !type.IsSubclassOf(typeof(UniqueIDScriptable));
         foreach (var field in GetSerializedFields(type))
         {
             no_field = false;
-            if (is_create) CreateBaseJson(field.FieldType, base_type, is_script);
-            data[field.Name] = FieldToJsonData(field, base_type);
+            if (is_create) CreateBaseJson(field.FieldType, baseType, is_script);
+            data[field.Name] = FieldToJsonData(field, baseType);
         }
 
         if (no_field) data.SetJsonType(JsonType.Object);
@@ -689,9 +692,9 @@ public class EditorJsonData
     /// 字段转 JsonData
     /// </summary>
     /// <param name="field">字段信息</param>
-    /// <param name="base_type">顶层类型名称</param>
+    /// <param name="baseType">顶层类型名称</param>
     /// <returns>JsonData</returns>
-    private JsonData FieldToJsonData(FieldInfo field, Type base_type)
+    private JsonData FieldToJsonData(FieldInfo field, Type baseType)
     {
         JsonData data;
         var type = field.FieldType;
@@ -718,7 +721,7 @@ public class EditorJsonData
         }
         else
         {
-            data = ClassFieldToJsonData(type, base_type);
+            data = ClassFieldToJsonData(type, baseType);
         }
 
         return data;
@@ -728,11 +731,11 @@ public class EditorJsonData
     /// 类类型转 JsonData
     /// </summary>
     /// <param name="type">类型</param>
-    /// <param name="base_type">顶层类型名称</param>
+    /// <param name="baseType">顶层类型名称</param>
     /// <returns>JsonData</returns>
-    private JsonData ClassFieldToJsonData(Type type, Type base_type)
+    private JsonData ClassFieldToJsonData(Type type, Type baseType)
     {
-        if (!type.IsSubclassOf(typeof(UnityEngine.Object))) return TypeToJsonData(type, base_type);
+        if (!type.IsSubclassOf(typeof(UnityEngine.Object))) return TypeToJsonData(type, baseType);
 
         var data = new JsonData
         {
@@ -750,14 +753,6 @@ public class EditorJsonData
     /// <param name="json">Json字符串</param>
     private static void OutputJson(string path, string name, string json)
     {
-        // try
-        // {
-        //     json = Regex.Unescape(json);
-        // }
-        // catch (ArgumentException)
-        // {
-        // }
-
         json = Unescape(json);
 
         var file = File.CreateText(Path.Combine(path, $"{name}.json"));
